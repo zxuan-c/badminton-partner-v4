@@ -3,149 +3,266 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>羽球賽程產生器＋記分（等量出賽版）</title>
+  <title>羽球賽程（勾選出席，自動產生）</title>
   <meta name="theme-color" content="#0b0f14" />
   <style>
     :root{ --bg:#0b0f14; --card:#121923; --text:#e6edf3; --muted:#9fb1c1; --accent:#5cc8ff; --accent-2:#8affcc; --danger:#ff6b6b; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:18px; }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{ margin:0; background:linear-gradient(180deg,#0b0f14,#0f1520); color:var(--text);
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{ margin:0; background:linear-gradient(180deg,#0b0f14 0%,#0f1520 100%); color:var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, "PingFang TC","Noto Sans TC","Microsoft JhengHei", Segoe UI, Roboto, Helvetica, Arial;
       display:flex; align-items:center; justify-content:center; padding:18px; }
-    .app{width:min(1200px,100%);} .grid{display:grid; grid-template-columns: 1.1fr .9fr; gap:16px}
-    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+    .app{width:min(1120px,100%);} .grid{display:grid; grid-template-columns:1.1fr .9fr; gap:16px} @media (max-width:980px){ .grid{grid-template-columns:1fr} }
     .card{ background: linear-gradient(180deg,#121a26,#0e1621); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); box-shadow:var(--shadow); }
     .card header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.06); }
-    .card header h2{ margin:0; font-size:18px; letter-spacing:.5px; color:#cfe5ff }
-    .card .body{ padding:14px; }
-    .btn{ cursor:pointer; background:linear-gradient(180deg,#1a2533,#152031); border:1px solid rgba(255,255,255,.08); color:var(--text);
-      padding:10px 12px; border-radius:12px; font-weight:700; letter-spacing:.3px; }
-    .btn.primary{ background:linear-gradient(180deg,#1d3247,#18293d); border-color:rgba(92,200,255,.5) }
-    .btn.secondary{ background:linear-gradient(180deg,#1a2c24,#16251f); border-color:rgba(138,255,204,.4) }
-    .btn.danger{ background:linear-gradient(180deg,#3a1d22,#2a1619); border-color:rgba(255,107,107,.4) }
-    .stage{ min-height:58vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
-      padding: calc(env(safe-area-inset-top,0px) + 34px) 16px 20px; text-align:center; }
-    .teams{ display:grid; gap:12px; width:100% }
-    .team{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; background:linear-gradient(180deg,#0e1a26,#0c1621);
-      border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:12px; }
-    .players{ display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap }
-    .badge{ padding:8px 10px; border-radius:999px; background:linear-gradient(180deg,#21334a,#1c2a3f); border:1px solid rgba(255,255,255,.08); font-weight:800; }
+    .card header h2{ margin:0; font-size:18px; letter-spacing:.5px; color:#cfe5ff } .card .body{ padding:14px; }
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .btn{ cursor:pointer; user-select:none; background: linear-gradient(180deg,#1a2533,#152031); border:1px solid rgba(255,255,255,.08); color:var(--text); padding:10px 12px; border-radius:12px; font-weight:700; letter-spacing:.3px }
+    .btn.primary{ background:linear-gradient(180deg,#1d3247,#18293d); border-color:rgba(92,200,255,.5) } .btn.secondary{ background:linear-gradient(180deg,#1a2c24,#16251f); border-color:rgba(138,255,204,.4) } .btn.danger{ background:linear-gradient(180deg,#3a1d22,#2a1619); border-color:rgba(255,107,107,.4) }
+    .pill{ padding:6px 10px; border:1px solid rgba(255,255,255,.08); border-radius:999px; background:#0a121a; color:#cfe5ff }
+    .hint{font-size:13px; color:#cfe5ff; opacity:.8}
+    .stage{ min-height:58vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding: calc(env(safe-area-inset-top,0px) + 34px) 16px 20px; text-align:center; }
+    .teams{ display:grid; gap:12px; width:100% } .team{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; background:linear-gradient(180deg,#0e1a26,#0c1621); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:12px }
+    .players{ display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap } .badge{ padding:8px 10px; border-radius:999px; background:linear-gradient(180deg,#21334a,#1c2a3f); border:1px solid rgba(255,255,255,.08); font-weight:800 }
     .vs{ font-weight:900; color:#a9c7ff; padding:6px 10px; border-radius:999px; border:1px dashed rgba(255,255,255,.15) }
-    .progress{ width:100%; height:8px; border-radius:999px; background:#0a1219; overflow:hidden; border:1px solid rgba(255,255,255,.06) }
-    .progress>div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .25s ease }
-    .scoreboard{ display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center; width:100%; margin-top:6px; padding:10px;
-      border:1px solid rgba(255,255,255,.06); border-radius:16px; background:linear-gradient(180deg,#121a26,#0e1621) }
-    .score{ display:flex; flex-direction:column; align-items:center; gap:8px }
-    .score .value{ font-size: clamp(34px,8vw,58px); font-weight:900; padding:6px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:#0b121b; min-width:88px }
-    .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
-    textarea{ width:100%; min-height:300px; resize:vertical; background:#0b121b; color:var(--text); border:1px solid rgba(255,255,255,.08);
-      border-radius:12px; padding:12px; line-height:1.6; font-size:14px }
-    .section{ display:flex; flex-direction:column; gap:8px; padding:10px; border:1px solid rgba(255,255,255,.08); border-radius:14px; background:#0b121b; }
-    .chips{ display:flex; flex-wrap:wrap; gap:8px } .chip{ display:inline-flex; gap:8px; align-items:center; padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#0f1722 }
-    .hint{ font-size:12px; color:#9fb1c1 }
-    .tag{ padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#101c2a; font-size:12px; color:#cfe5ff }
-    .toast{ position:fixed; right:12px; bottom:12px; background:#102033; color:#cfe5ff; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.12); display:none }
-    @media (max-width: 768px) {
-  .stage {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 580px);
-  }
+    .progress{ width:100%; height:8px; border-radius:999px; background:#0a1219; overflow:hidden; border:1px solid rgba(255,255,255,.06) } .progress>div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .25s ease }
+    .scoreboard{ display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center; width:100%; margin-top:6px; padding:10px; border:1px solid rgba(255,255,255,.06); border-radius:16px; background:linear-gradient(180deg,#121a26,#0e1621) }
+    .score{ display:flex; flex-direction:column; align-items:center; gap:8px } .score .value{ font-size: clamp(34px,8vw,58px); font-weight:900; padding:6px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:#0b121b; min-width:88px }
+    .counter{font-size:13px; color:#9fb1c1} textarea{ width:100%; min-height:260px; background:#0b121b; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px } .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#0f1722 }
+    .chip input{ accent-color:#70d1ff }
+    .overlay{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); backdrop-filter: blur(2px); }
+    .spinner{ width:64px; height:64px; border-radius:50%; border:6px solid rgba(255,255,255,.18); border-top-color:#5cc8ff; animation: spin 1s linear infinite }
+    @keyframes spin{ to{ transform: rotate(360deg) } }
   </style>
 </head>
 <body>
   <div class="app grid">
     <section class="card left">
-      <header><h2>賽程舞台</h2><div class="row"><span class="tag" id="total-pill">共 0 場</span></div></header>
+      <header>
+        <h2>賽程舞台</h2>
+        <div class="row"><span class="pill" id="total-pill">共 0 場</span><span class="pill" id="status-pill">就緒</span></div>
+      </header>
       <div class="body">
         <div class="stage">
-          <div id="counter">第 0 / 0 場</div>
+          <div class="counter" id="counter">第 0 / 0 場</div>
           <div class="teams" id="teams"></div>
-          <div class="scoreboard">
-            <div class="score"><div class="value" id="leftScore">0</div><div class="row"><button class="btn secondary" id="leftMinus">-1</button><button class="btn primary" id="leftPlus">+1</button></div></div>
-            <div class="row" style="flex-direction:column"><button class="btn" id="swapBtn">左右交換</button><button class="btn danger" id="resetScoreBtn">重置比分</button></div>
-            <div class="score"><div class="value" id="rightScore">0</div><div class="row"><button class="btn secondary" id="rightMinus">-1</button><button class="btn primary" id="rightPlus">+1</button></div></div>
+
+          <div class="scoreboard" aria-label="記分板">
+            <div class="score">
+              <div class="value" id="leftScore">0</div>
+              <div class="row">
+                <button class="btn secondary" id="leftMinus">-1</button>
+                <button class="btn primary" id="leftPlus">+1</button>
+              </div>
+            </div>
+            <div class="row" style="flex-direction:column">
+              <button class="btn" id="swapBtn">左右交換</button>
+              <button class="btn danger" id="resetScoreBtn">重置比分</button>
+            </div>
+            <div class="score">
+              <div class="value" id="rightScore">0</div>
+              <div class="row">
+                <button class="btn secondary" id="rightMinus">-1</button>
+                <button class="btn primary" id="rightPlus">+1</button>
+              </div>
+            </div>
           </div>
+
           <div class="progress"><div id="bar"></div></div>
-          <div class="row" style="margin-top:8px"><button class="btn" id="prevBtn">← 上一場（P）</button><button class="btn primary" id="nextBtn">下一場（N） →</button></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="prevBtn">← 上一場（P）</button>
+            <button class="btn primary" id="nextBtn">下一場（N） →</button>
+          </div>
+          <div class="counter">快捷鍵：N 下一場、P 上一場、R 重置場次、[ / ] 左/右 +1、{ / } 左/右 -1。</div>
         </div>
       </div>
     </section>
+
     <section class="card right">
-      <header><h2>名單 / 規則 / 產生器</h2></header>
+      <header><h2>勾選出席 → 自動產生</h2></header>
       <div class="body">
-        <div class="section">
-          <strong>固定 8 人名單（勾選今日出席）</strong>
-          <div class="chips" id="roster"></div>
-          <div class="row"><button class="btn" id="allToggle">全選/全不選</button><button class="btn danger" id="hardReset">硬重置（清空儲存）</button></div>
-        </div>
-        <div class="section">
-          <strong>規則</strong>
-          <div class="row">
-            <span class="tag">出場均衡：每人必須 = 4M/N（硬性）</span>
-            <label class="tag">K（連續上場上限） <input id="kInput" type="number" value="2" min="1" max="5" style="width:56px;margin-left:6px;background:#0b121b;color:#e6edf3;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 6px"></label>
-            <label class="tag">禁止連休 <select id="noDoubleRest" style="margin-left:6px;background:#0b121b;color:#e6edf3;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 6px"><option value="yes" selected>是</option><option value="no">否</option></select></label>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div><strong>固定 8 人名單</strong></div>
+          <div class="row" style="flex:0 0 auto">
+            <button class="btn" id="allToggle">全選/全不選</button>
+            <button class="btn primary" id="autoGenBtn">產生賽程</button>
+            <button class="btn danger" id="hardReset">硬重置</button>
           </div>
-          <div class="row">
-            <label class="tag">相鄰3場不重複搭檔 <select id="noPartnerRepeat3" style="margin-left:6px;background:#0b121b;color:#e6edf3;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 6px"><option value="yes" selected>是</option><option value="no">否</option></select></label>
-            <label class="tag">相鄰場不重複完整對戰 <select id="noExactAdjacent" style="margin-left:6px;background:#0b121b;color:#e6edf3;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 6px"><option value="yes" selected>是</option><option value="no">否</option></select></label>
-            <label class="tag">全局唯一 <select id="globalUnique" style="margin-left:6px;background:#0b121b;color:#e6edf3;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 6px"><option value="no" selected>否</option><option value="yes">是</option></select></label>
-            <label class="tag">每對搭檔最多 t_max <input id="tmaxInput" type="number" value="3" min="1" max="6" style="width:56px;margin-left:6px;background:#0b121b;color:#e6edf3;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 6px"></label>
-          </div>
-          <div class="hint">特例：N=7、M=21 時，每一對搭檔恰好 2 次（硬性）。</div>
         </div>
-        <div class="section">
+        <div class="chips" id="roster"></div>
+        <div class="hint">請勾選今天出席的人（支援 4–8 人）。系統會自動選擇場數與規則，計算時間較長請稍候。</div>
+
+        <div style="margin-top:8px">
           <strong>賽程清單</strong>
-          <textarea id="inputArea" spellcheck="false" placeholder="按『產生賽程』或自行貼上。每行：A + B vs C + D"></textarea>
-          <div class="row">
-            <button class="btn primary" id="genBtn">產生賽程（套用規則）</button>
-            <button class="btn secondary" id="loadBtn">載入賽程 → 舞台</button>
+          <textarea id="inputArea" spellcheck="false" placeholder="每行：A + B vs C + D"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="loadBtn">載入賽程 → 舞台</button>
+            <button class="btn" id="shuffleOrderBtn">打散順序</button>
             <button class="btn" id="resetBtn">重置到第 1 場</button>
           </div>
         </div>
       </div>
     </section>
   </div>
-  <div class="toast" id="toast"></div>
+
+  <div class="overlay" id="overlay"><div class="spinner"></div></div>
+
   <script>
-    // ----- Roster -----
+    // ---------- Setup ----------
     const DEFAULT_PLAYERS=['Judy','Jesha','Lucas','Doris','Iris','Luna','Mars','Soloman'];
+    const STORAGE_KEY='badminton-pick-v1';
+
     const rosterEl=document.getElementById('roster');
-    function renderRoster(){ rosterEl.innerHTML=''; DEFAULT_PLAYERS.forEach(p=>{ const el=document.createElement('label'); el.className='chip'; el.innerHTML=`<input type="checkbox" data-name="${p}" checked> ${p}`; rosterEl.appendChild(el); }); }
-    function getAttendees(){ return Array.from(rosterEl.querySelectorAll('input[type=checkbox]')).filter(cb=>cb.checked).map(cb=>cb.getAttribute('data-name')); }
-    document.getElementById('allToggle').onclick=()=>{ const boxes=[...rosterEl.querySelectorAll('input[type=checkbox]')]; const all=boxes.every(b=>b.checked); boxes.forEach(b=>b.checked=!all); };
+    function renderRoster(){
+      rosterEl.innerHTML='';
+      DEFAULT_PLAYERS.forEach(p=>{
+        const el=document.createElement('label');
+        el.className='chip';
+        el.innerHTML=`<input type="checkbox" data-name="${p}" checked> ${p}`;
+        rosterEl.appendChild(el);
+      });
+    }
+    function getAttendees(){
+      return Array.from(rosterEl.querySelectorAll('input[type=checkbox]'))
+        .filter(cb=>cb.checked).map(cb=>cb.getAttribute('data-name'));
+    }
+    document.getElementById('allToggle').onclick=()=>{
+      const boxes=[...rosterEl.querySelectorAll('input[type=checkbox]')];
+      const all=boxes.every(b=>b.checked);
+      boxes.forEach(b=>b.checked=!all);
+    };
 
-    // ----- Stage / Scoring -----
-    const inputArea=document.getElementById('inputArea'); const teamsEl=document.getElementById('teams'); const counterEl=document.getElementById('counter'); const barEl=document.getElementById('bar'); const totalPill=document.getElementById('total-pill');
-    const leftScore=document.getElementById('leftScore'), rightScore=document.getElementById('rightScore');
-    const STORAGE_KEY='badminton-fixture-v6'; let matches=[], idx=0, scores={};
-    function toast(s){ const t=document.getElementById('toast'); t.textContent=s; t.style.display='block'; setTimeout(()=>t.style.display='none',2000); }
+    const inputArea=document.getElementById('inputArea');
+    const teamsEl=document.getElementById('teams');
+    const counterEl=document.getElementById('counter');
+    const barEl=document.getElementById('bar');
+    const totalPill=document.getElementById('total-pill');
+    const statusPill=document.getElementById('status-pill');
+    const overlay=document.getElementById('overlay');
+
+    let matches=[]; let idx=0; let scores={};
+
+    function status(s){ statusPill.textContent=s; }
+    function showOverlay(v){ overlay.style.display = v ? 'grid' : 'none'; }
+
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({text:inputArea.value, idx, scores})); }
-    function load(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(raw){ const d=JSON.parse(raw); inputArea.value=d.text||''; idx=d.idx||0; scores=d.scores||{}; } }catch(e){} parse(); render(); }
-    document.getElementById('hardReset').onclick=()=>{ localStorage.removeItem(STORAGE_KEY); inputArea.value=''; matches=[]; idx=0; scores={}; render(); toast('已清空儲存'); };
+    function load(){
+      try{
+        const raw=localStorage.getItem(STORAGE_KEY);
+        if(raw){
+          const d=JSON.parse(raw);
+          inputArea.value=(d.text||'').replace(/\\n/g,'\n'); // 重要：把 "\n" 轉成真正換行
+          idx=d.idx||0;
+          scores=d.scores||{};
+        }
+      }catch(e){}
+      parse(); render();
+    }
+    document.getElementById('hardReset').onclick=()=>{
+      localStorage.removeItem(STORAGE_KEY);
+      inputArea.value=''; matches=[]; idx=0; scores={}; render(); status('已清空');
+    };
 
-    function normalizeVs(s){ s=s.replace(/[\u3000]/g,' '); s=s.replace(/\s+/g,' ').replace(/\s*(?:vs\.?|VS\.?|Vs\.?|v\.|對|對上|對戰|vs：|vs:)\s*/g,' vs ').trim(); const parts=s.split(/\s+vs\s+/i); if(parts.length>2) s=parts[0]+' vs '+parts.slice(1).join(' & '); return s; }
-    function splitNames(t){ let arr=t.split(/\s*(?:\+|、|，|,|＆|&)\s*/).filter(Boolean); if(arr.length===1){ arr=t.split(/\s+/).filter(Boolean); } return arr; }
-    function parseLine(line){ const norm=normalizeVs(line); const pr=norm.split(/\s+vs\s+/i); if(pr.length!==2) return null; const L=splitNames(pr[0]), R=splitNames(pr[1]); if(L.length!==2||R.length!==2) return null; return {left:L,right:R,raw:norm}; }
-    function parse(){ matches=[]; (inputArea.value||'').split(/\r?\n/).forEach(ln=>{ ln=ln.replace(/\r/g,'').trim(); if(!ln) return; const m=parseLine(ln); if(m) matches.push(m); }); if(idx>=matches.length) idx=Math.max(0,matches.length-1); totalPill.textContent=`共 ${matches.length} 場`; save(); }
+    // ---------- Parsing / Rendering ----------
+    function normalizeVs(s){
+      s=s.replace(/[\u3000]/g,' ');
+      s=s.replace(/\s+/g,' ').trim();
+      s=s.replace(/\s*(?:vs\.?|VS\.?|Vs\.?|v\.|V\.|對|對上|對戰|vs：|vs:)\s*/g,' vs ');
+      const parts=s.split(/\s+vs\s+/i);
+      if(parts.length>2) s=parts[0]+' vs '+parts.slice(1).join(' & ');
+      return s;
+    }
+    function splitNames(t){
+      let arr=t.split(/\s*(?:\+|、|，|,|＆|&)\s*/).filter(Boolean);
+      if(arr.length===1){ arr=t.split(/\s+/).filter(Boolean); }
+      return arr;
+    }
+    function parseLine(line){
+      const norm=normalizeVs(line);
+      const pr=norm.split(/\s+vs\s+/i);
+      if(pr.length!==2) return null;
+      const L=splitNames(pr[0]), R=splitNames(pr[1]);
+      if(L.length!==2||R.length!==2) return null;
+      return {left:L,right:R,raw:norm};
+    }
+    function parse(){
+      matches=[];
+      const cleanText=(inputArea.value||'').replace(/\\n/g,'\n'); // 重要：把 "\n" 轉換
+      cleanText.split(/\r?\n/).forEach(ln=>{
+        ln=ln.replace(/\r/g,'').trim();
+        if(!ln) return;
+        const m=parseLine(ln);
+        if(m) matches.push(m);
+      });
+      if(idx>=matches.length) idx=Math.max(0,matches.length-1);
+      totalPill.textContent=`共 ${matches.length} 場`;
+      save();
+    }
     function ensureScore(){ if(!scores[idx]) scores[idx]={l:0,r:0,swapped:false}; }
-    function renderScores(){ ensureScore(); leftScore.textContent=scores[idx].l; rightScore.textContent=scores[idx].r; }
-    function render(){ teamsEl.innerHTML=''; if(!matches.length){ counterEl.textContent='第 0 / 0 場'; barEl.style.width='0%'; renderScores(); return; } counterEl.textContent=`第 ${idx+1} / ${matches.length} 場`; barEl.style.width=((idx+1)/matches.length*100).toFixed(1)+'%'; ensureScore(); const lp=scores[idx].swapped?matches[idx].right:matches[idx].left; const rp=scores[idx].swapped?matches[idx].left:matches[idx].right; const mk=arr=>{ const w=document.createElement('div'); w.className='players'; arr.forEach(n=>{ const b=document.createElement('span'); b.className='badge'; b.textContent=n; w.appendChild(b); }); return w; }; const team=document.createElement('div'); team.className='team'; const L=document.createElement('div'); const VS=document.createElement('div'); const R=document.createElement('div'); VS.className='vs'; VS.textContent='VS'; L.appendChild(mk(lp)); R.appendChild(mk(rp)); team.appendChild(L); team.appendChild(VS); team.appendChild(R); teamsEl.appendChild(team); renderScores(); }
+    function renderScores(){ ensureScore(); document.getElementById('leftScore').textContent=scores[idx].l; document.getElementById('rightScore').textContent=scores[idx].r; }
+    function render(){
+      teamsEl.innerHTML='';
+      if(!matches.length){
+        counterEl.textContent='第 0 / 0 場'; barEl.style.width='0%'; renderScores(); return;
+      }
+      counterEl.textContent=`第 ${idx+1} / ${matches.length} 場`;
+      barEl.style.width=((idx+1)/matches.length*100).toFixed(1)+'%';
+      ensureScore();
+      const swapped=!!scores[idx].swapped;
+      const lp=swapped?matches[idx].right:matches[idx].left;
+      const rp=swapped?matches[idx].left:matches[idx].right;
+      const make=arr=>{
+        const w=document.createElement('div'); w.className='players';
+        arr.forEach(n=>{ const b=document.createElement('span'); b.className='badge'; b.textContent=n; w.appendChild(b); });
+        return w;
+      };
+      const team=document.createElement('div'); team.className='team';
+      const L=document.createElement('div'); const VS=document.createElement('div'); const R=document.createElement('div');
+      VS.className='vs'; VS.textContent='VS';
+      L.appendChild(make(lp)); R.appendChild(make(rp));
+      team.appendChild(L); team.appendChild(VS); team.appendChild(R);
+      teamsEl.appendChild(team);
+      renderScores();
+    }
     document.getElementById('nextBtn').onclick=()=>{ if(matches.length){ idx=(idx+1)%matches.length; render(); save(); } };
     document.getElementById('prevBtn').onclick=()=>{ if(matches.length){ idx=(idx-1+matches.length)%matches.length; render(); save(); } };
-    document.getElementById('resetBtn').onclick=()=>{ idx=0; render(); save(); toast('已回到第 1 場'); };
+    document.getElementById('resetBtn').onclick=()=>{ idx=0; render(); save(); status('已回到第 1 場'); };
     document.getElementById('swapBtn').onclick=()=>{ ensureScore(); scores[idx].swapped=!scores[idx].swapped; render(); save(); };
     document.getElementById('leftPlus').onclick=()=>{ ensureScore(); scores[idx].l=Math.min(30,scores[idx].l+1); renderScores(); save(); };
     document.getElementById('leftMinus').onclick=()=>{ ensureScore(); scores[idx].l=Math.max(0,scores[idx].l-1); renderScores(); save(); };
     document.getElementById('rightPlus').onclick=()=>{ ensureScore(); scores[idx].r=Math.min(30,scores[idx].r+1); renderScores(); save(); };
     document.getElementById('rightMinus').onclick=()=>{ ensureScore(); scores[idx].r=Math.max(0,scores[idx].r-1); renderScores(); save(); };
     document.getElementById('resetScoreBtn').onclick=()=>{ ensureScore(); scores[idx].l=0; scores[idx].r=0; renderScores(); save(); };
+    document.getElementById('loadBtn').onclick=()=>{ parse(); idx=0; render(); status('已載入'); };
+    document.getElementById('shuffleOrderBtn').onclick=()=>{
+      parse(); if(!matches.length){ status('沒有賽程可打散'); return; }
+      // 打散順序並用真正換行
+      for(let i=matches.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [matches[i],matches[j]]=[matches[j],matches[i]]; }
+      inputArea.value=matches.map(m=>`${m.left[0]} + ${m.left[1]} vs ${m.right[0]} + ${m.right[1]}`).join('\n');
+      parse(); idx=0; scores={}; render(); save(); status('已打散順序');
+    };
+    document.addEventListener('keydown',(e)=>{
+      if(e.key==='n'||e.key==='N'){ e.preventDefault(); document.getElementById('nextBtn').click(); }
+      if(e.key==='p'||e.key==='P'){ e.preventDefault(); document.getElementById('prevBtn').click(); }
+      if(e.key==='r'||e.key==='R'){ e.preventDefault(); document.getElementById('resetBtn').click(); }
+      if(e.key===']'){ ensureScore(); scores[idx].r=Math.min(30,scores[idx].r+1); renderScores(); save(); }
+      if(e.key==='['){ ensureScore(); scores[idx].l=Math.min(30,scores[idx].l+1); renderScores(); save(); }
+      if(e.key==='}'){ ensureScore(); scores[idx].r=Math.max(0,scores[idx].r-1); renderScores(); save(); }
+      if(e.key==='{'){ ensureScore(); scores[idx].l=Math.max(0,scores[idx].l-1); renderScores(); save(); }
+    });
 
-    // ----- Generator with equal-appearance hard constraint -----
+    // ---------- Generator（等量出賽 + 自動放寬規則） ----------
+    function C(n,k){ if(k<0||k>n) return 0; if(k===0||k===n) return 1; let r=1; for(let i=1;i<=k;i++){ r = r*(n-(k-i))/i; } return Math.round(r); }
     function chooseM(N){ if(N===8) return 20; if(N===7) return 21; if(N===6) return 18; if(N===5) return 20; if(N===4) return 12; return 0; }
+    function minFeasibleTmax(N){ const M=chooseM(N); if(!M) return 0; if(N===7&&M===21) return 2; const avg=(2*M)/C(N,2); return Math.ceil(avg); }
     function pairsOfFour([a,b,c,d]){ return [[[a,b],[c,d]], [[a,c],[b,d]], [[a,d],[b,c]]]; }
+    function setEq(a,b){ if(a.size!==b.size) return false; for(const v of a){ if(!b.has(v)) return false; } return true; }
     function pairId(p){ return p.slice().sort().join('&'); }
     function matchKey(m){ const t1=pairId(m[0]); const t2=pairId(m[1]); return [t1,t2].sort().join(' vs '); }
 
-    function generateSchedule(att, opts){
-      const N=att.length; const M=chooseM(N); if(!M) throw new Error('僅支援 4~8 人'); const target = (4*M)/N; // hard equality
+    function generateSchedule(att, opts, timeBudgetMs){
+      const N=att.length; const M=chooseM(N); const target=(4*M)/N;
       const plays=Object.fromEntries(att.map(n=>[n,0])); const consec=Object.fromEntries(att.map(n=>[n,0])); const rest=Object.fromEntries(att.map(n=>[n,0]));
       const partnerCount={}; const recentPairs=[]; const global=new Set(); const sched=[];
 
@@ -161,49 +278,99 @@
       }
       function canRest(name){ return !(opts.noDoubleRest && rest[name]>=1); }
       function feasibleCountsAfterPick(pick){ for(const n of pick){ if(plays[n]+1>target) return false; } const leftMatches=M - (sched.length+1); const leftSlots=leftMatches*4; let deficit=0; att.forEach(n=>{ deficit += Math.max(0, target - (plays[n] + (pick.includes(n)?1:0))); }); return deficit<=leftSlots; }
-      function partnerOk(pair){ const id=pairId(pair); const count=partnerCount[id]||0; if(N===7 && M===21){ if(count>=2) return false; } else { if(count>=opts.tmax) return false; } if(opts.noPartnerRepeat3){ for(let i=recentPairs.length-1,c=0;i>=0&&c<3;i--,c++){ const [a,b]=recentPairs[i]; if(a===id||b===id) return false; } } return true; }
+      function partnerOk(pair){ const id=pairId(pair); const count=partnerCount[id]||0; if(N===7 && M===21){ if(count>=2) return false; } else if(count>=opts.tmax){ return false; } if(opts.noPartnerRepeat3){ for(let i=recentPairs.length-1,c=0;i>=0&&c<3;i--,c++){ const [a,b]=recentPairs[i]; if(a===id||b===id) return false; } } return true; }
       function exactAdjacentOk(prev,cur){ if(!opts.noExactAdjacent || !prev) return true; const A=new Set([pairId(prev[0]), pairId(prev[1])]); const B=new Set([pairId(cur[0]), pairId(cur[1])]); if(A.size!==B.size) return true; for(const v of A){ if(!B.has(v)) return true; } return false; }
       function allBalanced(){ return att.every(n=>plays[n]===target); }
       function pairsExactSatisfied(){ if(!(N===7&&M===21)) return true; for(let i=0;i<N;i++){ for(let j=i+1;j<N;j++){ const id=pairId([att[i],att[j]]); if((partnerCount[id]||0)!==2) return false; } } return true; }
 
-      function next(depth, deadline){
+      function next(deadline){
         if(Date.now()>deadline) return false;
-        if(depth===M) return allBalanced() && pairsExactSatisfied();
-        const sorted=att.slice().sort((a,b)=>{ if(plays[a]!==plays[b]) return plays[a]-plays[b]; return rest[b]-rest[a]; }); // prioritize fewer plays, longer rest
+        if(sched.length===M) return allBalanced() && pairsExactSatisfied();
+        const sorted=att.slice().sort((a,b)=>{ if(plays[a]!==plays[b]) return plays[a]-plays[b]; return rest[b]-rest[a]; });
         const cand4=[];
-        function dfs(s,pick){ if(pick.length===4){ cand4.push(pick.slice()); return; } for(let i=s;i<sorted.length;i++){ const name=sorted[i]; if(consec[name]>=opts.K) continue; pick.push(name); dfs(i+1,pick); pick.pop(); } }
-        dfs(0,[]); for(let i=cand4.length-1;i>0;i--){ const j=Math.random()* (i+1) | 0; [cand4[i],cand4[j]]=[cand4[j],cand4[i]]; }
+        function pick4(s,p){ if(p.length===4){ cand4.push(p.slice()); return; } for(let i=s;i<sorted.length;i++){ const name=sorted[i]; if(consec[name]>=opts.K) continue; p.push(name); pick4(i+1,p); p.pop(); } }
+        pick4(0,[]);
+        for(let i=cand4.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cand4[i],cand4[j]]=[cand4[j],cand4[i]]; }
         for(const four of cand4){
-          const set=new Set(four); let okRest=true; for(const n of att){ if(!set.has(n)&&!canRest(n)){ okRest=false; break; } } if(!okRest) continue;
+          const set=new Set(four);
+          let okRest=true; for(const n of att){ if(!set.has(n) && !canRest(n)){ okRest=false; break; } }
+          if(!okRest) continue;
           if(!feasibleCountsAfterPick(four)) continue;
-          const pairings=pairsOfFour(four); for(let i=pairings.length-1;i>0;i--){ const j=Math.random()* (i+1) | 0; [pairings[i],pairings[j]]=[pairings[j],pairings[i]]; }
+          const pairings=pairsOfFour(four);
+          for(let i=pairings.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [pairings[i],pairings[j]]=[pairings[j],pairings[i]]; }
           for(const pr of pairings){
             if(!partnerOk(pr[0])||!partnerOk(pr[1])) continue;
             if(opts.globalUnique && global.has(matchKey(pr))) continue;
             const prev=sched.length? sched[sched.length-1]:null; if(!exactAdjacentOk(prev,pr)) continue;
             sched.push(pr); recompute();
-            if(next(depth+1, deadline)) return true;
+            if(next(deadline)) return true;
             sched.pop(); recompute();
+            if(Date.now()>deadline) return false;
           }
         }
         return false;
       }
-      const deadline1=Date.now()+2000; let ok=next(0,deadline1); if(!ok){ const deadline2=Date.now()+5000; ok=next(sched.length,deadline2); }
-      if(!ok) throw new Error('規則太嚴苛，無法在時限內找到等量出賽解。請放寬 t_max/全局唯一/禁止連休 或調小 K 後再試。');
-      return sched;
+
+      const deadline = Date.now() + timeBudgetMs;
+      const ok = next(deadline);
+      return ok ? sched : null;
     }
 
-    function scheduleToText(s){ return s.map(m=>`${m[0][0]} + ${m[0][1]} vs ${m[1][0]} + ${m[1][1]}`).join('\n'); }
-    document.getElementById('genBtn').onclick=()=>{
-      const A=getAttendees(); if(A.length<4){ toast('至少需要 4 人'); return; } if(A.length>8){ toast('最多支援 8 人'); return; }
-      const opts={ K:Math.max(1,Math.min(5,parseInt(document.getElementById('kInput').value||'2',10))), noDoubleRest:document.getElementById('noDoubleRest').value==='yes', noPartnerRepeat3:document.getElementById('noPartnerRepeat3').value==='yes', noExactAdjacent:document.getElementById('noExactAdjacent').value==='yes', globalUnique:document.getElementById('globalUnique').value==='yes', tmax:Math.max(1,parseInt(document.getElementById('tmaxInput').value||'3',10)) };
-      try{ const sch=generateSchedule(A,opts); inputArea.value=scheduleToText(sch); parse(); idx=0; render(); save(); toast(`已產生 ${matches.length} 場（N=${A.length}）`); }catch(e){ console.error(e); toast(e.message||'產生失敗'); }
+    async function autoGenerate(attendees){
+      const N = attendees.length;
+      if(N<4){ status('至少需要 4 人'); return; }
+      if(N>8){ status('最多支援 8 人'); return; }
+      const M=chooseM(N);
+      status(`出席 ${N} 人，目標 ${M} 場…`);
+      showOverlay(true);
+
+      let base = {
+        K: 2,
+        noDoubleRest: true,
+        noPartnerRepeat3: true,
+        noExactAdjacent: true,
+        globalUnique: false,
+        tmax: minFeasibleTmax(N)
+      };
+
+      const steps = [];
+      for(let t=base.tmax; t<=10; t++) steps.push({ ...base, tmax:t });
+      for(let t=base.tmax; t<=10; t++) steps.push({ ...base, tmax:t, globalUnique:true });
+      steps.push({ ...base, noPartnerRepeat3:false });
+      steps.push({ ...base, noPartnerRepeat3:false, noExactAdjacent:false });
+      steps.push({ ...base, noPartnerRepeat3:false, noExactAdjacent:false, K:3 });
+      steps.push({ ...base, noPartnerRepeat3:false, noExactAdjacent:false, K:3, noDoubleRest:false });
+
+      let result=null, usedOpts=null;
+      for(const [i, st] of steps.entries()){
+        status(`嘗試設定 ${i+1}/${steps.length}…（t_max=${st.tmax}, K=${st.K}, 禁止連休=${st.noDoubleRest?'是':'否'}）`);
+        for(let attempt=0; attempt<5 && !result; attempt++){
+          result = generateSchedule(attendees, st, 5000 + attempt*3000); // 每步 5~14 秒
+          await new Promise(r=>setTimeout(r,0));
+        }
+        if(result){ usedOpts = st; break; }
+      }
+
+      showOverlay(false);
+
+      if(!result){
+        status('仍未找到可行解；請調整出席名單或稍後再試。');
+        return;
+      }
+
+      // 用真正換行寫入清單
+      inputArea.value = result.map(m=>`${m[0][0]} + ${m[0][1]} vs ${m[1][0]} + ${m[1][1]}`).join('\n');
+      parse(); idx=0; scores={}; render(); save();
+      status(`完成：N=${N}, M=${M}, t_max=${usedOpts.tmax}, K=${usedOpts.K}（禁止連休=${usedOpts.noDoubleRest?'是':'否'}）`);
+    }
+
+    document.getElementById('autoGenBtn').onclick=()=>{
+      const att = getAttendees();
+      autoGenerate(att);
     };
-    document.getElementById('loadBtn').onclick=()=>{ parse(); idx=0; render(); toast('已載入賽程'); };
-    inputArea.addEventListener('input', parse);
 
     // init
-    renderRoster(); load();
+    renderRoster(); load(); status('就緒');
   </script>
 </body>
 </html>
