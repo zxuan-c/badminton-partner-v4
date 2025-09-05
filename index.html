@@ -44,6 +44,10 @@
     .hint{ font-size:12px; color:#9fb1c1 }
     .tag{ padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#101c2a; font-size:12px; color:#cfe5ff }
     .toast{ position:fixed; right:12px; bottom:12px; background:#102033; color:#cfe5ff; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.12); display:none }
+    @media (max-width: 768px) {
+  .stage {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 580px);
+  }
   </style>
 </head>
 <body>
