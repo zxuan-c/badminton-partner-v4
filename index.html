@@ -34,6 +34,10 @@
     .overlay{ position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.45); backdrop-filter: blur(2px); }
     .spinner{ width:64px; height:64px; border-radius:50%; border:6px solid rgba(255,255,255,.18); border-top-color:#5cc8ff; animation: spin 1s linear infinite }
     @keyframes spin{ to{ transform: rotate(360deg) } }
+     @media (max-width: 768px) {
+  .stage {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 580px);
+  }
   </style>
 </head>
 <body>
