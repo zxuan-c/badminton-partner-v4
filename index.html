@@ -31,10 +31,9 @@
     .counter{font-size:13px; color:#9fb1c1} textarea{ width:100%; min-height:260px; background:#0b121b; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px }
     .chips{ display:flex; flex-wrap:wrap; gap:8px } .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#0f1722 }
     .chip input{ accent-color:#70d1ff }
-     @media (max-width: 768px) {
-  .stage {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 580px);
-  }
+    @media (max-width: 768px) {
+      .stage { padding-top: calc(env(safe-area-inset-top, 0px) + 580px); }
+    }
   </style>
 </head>
 <body>
@@ -149,8 +148,8 @@
         const raw=localStorage.getItem(STORAGE_KEY);
         if(raw){
           const d=JSON.parse(raw);
-          inputArea.value=(d.text||'').replace(/\\n/g,'\n'); // 轉實際換行
-          idx=d.idx||0;
+          inputArea.value=(d.text||'');
+          idx=Number.isInteger(d.idx)?d.idx:0;
           scores=d.scores||{};
         }
       }catch(e){}
@@ -163,21 +162,21 @@
 
     // ---------- Parsing / Rendering ----------
     function normalizeVs(s){
-      s=s.replace(/[\\u3000]/g,' ');
-      s=s.replace(/\\s+/g,' ').trim();
-      s=s.replace(/\\s*(?:vs\\.?|VS\\.?|Vs\\.?|v\\.|V\\.|對|對上|對戰|vs：|vs:)\\s*/g,' vs ');
-      const parts=s.split(/\\s+vs\\s+/i);
+      s=s.replace(/[\u3000]/g,' ');
+      s=s.replace(/\s+/g,' ').trim();
+      s=s.replace(/\s*(?:vs\.?|VS\.?|Vs\.?|v\.|V\.|對|對上|對戰|vs：|vs:)\s*/g,' vs ');
+      const parts=s.split(/\s+vs\s+/i);
       if(parts.length>2) s=parts[0]+' vs '+parts.slice(1).join(' & ');
       return s;
     }
     function splitNames(t){
-      let arr=t.split(/\\s*(?:\\+|、|，|,|＆|&)\\s*/).filter(Boolean);
-      if(arr.length===1){ arr=t.split(/\\s+/).filter(Boolean); }
+      let arr=t.split(/\s*(?:\+|、|，|,|＆|&|＋)\s*/).filter(Boolean);
+      if(arr.length===1){ arr=t.split(/\s+/).filter(Boolean); }
       return arr;
     }
     function parseLine(line){
       const norm=normalizeVs(line);
-      const pr=norm.split(/\\s+vs\\s+/i);
+      const pr=norm.split(/\s+vs\s+/i);
       if(pr.length!==2) return null;
       const L=splitNames(pr[0]), R=splitNames(pr[1]);
       if(L.length!==2||R.length!==2) return null;
@@ -185,9 +184,9 @@
     }
     function parse(){
       matches=[];
-      const cleanText=(inputArea.value||'').replace(/\\n/g,'\n');
-      cleanText.split(/\\r?\\n/).forEach(ln=>{
-        ln=ln.replace(/\\r/g,'').trim();
+      const cleanText=(inputArea.value||'');
+      cleanText.split(/\r?\n/).forEach(ln=>{
+        ln=ln.replace(/\r/g,'').trim();
         if(!ln) return;
         const m=parseLine(ln);
         if(m) matches.push(m);
@@ -240,7 +239,10 @@
     document.getElementById('rightPlus').onclick=()=>{ ensureScore(); scores[idx].r=Math.min(30,scores[idx].r+1); renderScores(); save(); };
     document.getElementById('rightMinus').onclick=()=>{ ensureScore(); scores[idx].r=Math.max(0,scores[idx].r-1); renderScores(); save(); };
     document.getElementById('resetScoreBtn').onclick=()=>{ ensureScore(); scores[idx].l=0; scores[idx].r=0; renderScores(); save(); };
-    document.getElementById('loadBtn').onclick=()=>{ parse(); idx=0; render(); status('已載入'); };
+
+    // ✅ 修正：載入按鈕現在會回到第 1 場並清空舊比分，避免「看起來沒變」的錯覺
+    document.getElementById('loadBtn').onclick=()=>{ parse(); if(!matches.length){ status('沒有可載入的賽程'); return; } idx=0; scores={}; render(); save(); status('已載入'); };
+
     document.getElementById('shuffleOrderBtn').onclick=()=>{
       parse(); if(!matches.length){ status('沒有賽程可打散'); return; }
       for(let i=matches.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [matches[i],matches[j]]=[matches[j],matches[i]]; }
@@ -269,7 +271,6 @@
       function feasiblePair(p){ const id=pairId(p); return need[id]>0; }
       function pickPair(pref){
         const cands=pairList.filter(feasiblePair);
-        // 排序：需求量高 -> 涉及上場次較少的人 -> 隨機擾動
         cands.sort((x,y)=>{
           const nx=need[pairId(x)], ny=need[pairId(y)];
           if(nx!==ny) return ny-nx;
@@ -283,13 +284,11 @@
       let attempts=0;
       while(attempts<1500){
         attempts++;
-        // reset state
         for(const k in need) need[k]=tmax;
         players.forEach(p=>plays[p]=0);
         sched.length=0; global.clear();
 
         for(let r=0;r<M;r++){
-          // 選兩個不相交的 pair
           const listA=pickPair();
           let placed=false;
           for(const A of listA){
@@ -299,19 +298,15 @@
               const match=[[A[0],A[1]],[B[0],B[1]]];
               const key=matchKey(match);
               if(global.has(key)) continue;
-              // 避免與上一場完整對戰相同
               if(sched.length){
                 const prev=matchKey(sched[sched.length-1]);
                 if(prev===key) continue;
               }
-              // 嘗試放入
               const idA=pairId(A), idB=pairId(B);
               if(need[idA]<=0 || need[idB]<=0) continue;
-              // 檢查放入後每人不會超過 16 太早（鬆綁一點以免卡住）
               const newPlays=[...A,...B].map(p=>plays[p]+1);
               if(newPlays.some(v=>v>targetPlays)) continue;
 
-              // commit
               sched.push(match); global.add(key);
               need[idA]--; need[idB]--;
               plays[A[0]]++; plays[A[1]]++; plays[B[0]]++; plays[B[1]]++;
@@ -322,7 +317,6 @@
           }
           if(!placed){ break; }
         }
-        // 檢查是否完成
         const done = sched.length===M
           && players.every(p=>plays[p]===targetPlays)
           && Object.values(need).every(v=>v===0);
@@ -333,7 +327,6 @@
 
     function generateSchedule(att, opts, timeBudgetMs){
       const N=att.length; const M=chooseM(N); const target=(4*M)/N;
-      // N=5 直接進入專用生成器
       if(N===5){
         const got = generateScheduleN5(att);
         return got;
@@ -381,13 +374,11 @@
         if(Date.now()>deadline) return false;
         if(sched.length===M) return true;
 
-        // 以上場次少 + 休息久 排序，幫助均衡
         const sorted=att.slice().sort((a,b)=>{
           if(plays[a]!==plays[b]) return plays[a]-plays[b];
           return rest[b]-rest[a];
         });
 
-        // 列出所有可能 4 人組合
         const cand4=[];
         function pick4(s,p){
           if(p.length===4){ cand4.push(p.slice()); return; }
@@ -398,23 +389,20 @@
           }
         }
         pick4(0,[]);
-        // 打散嘗試順序
         for(let i=cand4.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cand4[i],cand4[j]]=[cand4[j],cand4[i]]; }
 
         for(const four of cand4){
           const set=new Set(four);
-          // 禁止連休檢查
           let okRest=true; for(const n of att){ if(!set.has(n) && !canRest(n)){ okRest=false; break; } }
           if(!okRest) continue;
           if(!feasibleCountsAfterPick(four)) continue;
 
-          // 三種配對
           const pairings=pairsOfFour(four);
           for(let i=pairings.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [pairings[i],pairings[j]]=[pairings[j],pairings[i]]; }
 
           for(const pr of pairings){
             const mk=matchKey(pr);
-            if(opts.globalUnique && (global.has(mk) || (sched.length && matchKey(sched[sched.length-1])===mk))) continue; // 防重複
+            if(opts.globalUnique && (global.has(mk) || (sched.length && matchKey(sched[sched.length-1])===mk))) continue;
             if(!partnerOk(pr[0])||!partnerOk(pr[1])) continue;
 
             sched.push(pr);
@@ -440,19 +428,17 @@
       const M=chooseM(N);
       status(`出席 ${N} 人，目標 ${M} 場…`);
 
-      // 預設更嚴：N<=6 先啟用全局唯一，避免重複完整對戰
       let base = {
         K: 2,
         noDoubleRest: true,
         noPartnerRepeat3: true,
         noExactAdjacent: true,
-        globalUnique: (N<=6),  // ← 這行是關鍵
+        globalUnique: (N<=6),
         tmax: minFeasibleTmax(N)
       };
 
-      // N=5 直接使用專用演算法
       if(N===5){
-        const result = generateSchedule(attendees, base, 0); // 內部會走 N=5 專用
+        const result = generateSchedule(attendees, base, 0);
         if(result){
           inputArea.value = result.map(m=>`${m[0][0]} + ${m[0][1]} vs ${m[1][0]} + ${m[1][1]}`).join('\n');
           parse(); idx=0; scores={}; render(); save();
@@ -464,11 +450,8 @@
       }
 
       const steps = [];
-      // 先嘗試較嚴（globalUnique=依 N），逐步把 tmax 拉大
       for(let t=base.tmax; t<=10; t++) steps.push({ ...base, tmax:t });
-      // 然後才放寬 unique
       for(let t=base.tmax; t<=10; t++) steps.push({ ...base, tmax:t, globalUnique:false });
-      // 再放寬相鄰限制、K、連休
       steps.push({ ...base, noPartnerRepeat3:false });
       steps.push({ ...base, noPartnerRepeat3:false, noExactAdjacent:false });
       steps.push({ ...base, noPartnerRepeat3:false, noExactAdjacent:false, K:3 });
@@ -478,7 +461,7 @@
       for(const [i, st] of steps.entries()){
         status(`嘗試設定 ${i+1}/${steps.length}…（t_max=${st.tmax}, K=${st.K}, 全局唯一=${st.globalUnique?'是':'否'}）`);
         for(let attempt=0; attempt<5 && !result; attempt++){
-          result = generateSchedule(attendees, st, 6000 + attempt*4000); // 給更長時間
+          result = generateSchedule(attendees, st, 6000 + attempt*4000);
           await new Promise(r=>setTimeout(r,0));
         }
         if(result){ usedOpts = st; break; }
@@ -499,7 +482,6 @@
       autoGenerate(att);
     };
 
-    // 控制台：上一場 / 下一場 / 交換 / 記分（同前）
     document.addEventListener('keydown',(e)=>{
       if(e.key==='n'||e.key==='N'){ e.preventDefault(); document.getElementById('nextBtn').click(); }
       if(e.key==='p'||e.key==='P'){ e.preventDefault(); document.getElementById('prevBtn').click(); }
@@ -508,13 +490,10 @@
       if(e.key==='['){ ensureScore(); scores[idx].l=Math.min(30,scores[idx].l+1); renderScores(); save(); }
       if(e.key==='}'){ ensureScore(); scores[idx].r=Math.max(0,scores[idx].r-1); renderScores(); save(); }
       if(e.key==='{'){ ensureScore(); scores[idx].l=Math.max(0,scores[idx].l-1); renderScores(); save(); }
+      if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ document.getElementById('loadBtn').click(); }
     });
 
-    // 初始渲染
     renderRoster(); load(); status('就緒');
-
-    // 左側進度條 DOM（首次渲染後建立）
-    // 這段在 render() 內會自動補，不需額外處理。
   </script>
 </body>
 </html>
