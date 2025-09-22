@@ -27,22 +27,22 @@
 
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
 
-    .btn{ cursor:pointer; user-select:none; background: linear-gradient(180deg,#1a2533,#152031); border:1px solid rgba(255,255,255,.08); color:var(--text); padding:10px 12px; border-radius:12px; font-weight:700; letter-spacing:.3px }
-    .btn.primary{ background:linear-gradient(180deg,#1d3247,#18293d); border-color:rgba(92,200,255,.5) }
-    .btn.secondary{ background:linear-gradient(180deg,#1a2c24,#16251f); border-color:rgba(138,255,204,.4) }
+    .btn{ cursor:pointer; user-select:none; background: linear-gradient(180deg,#1a2533,#152031); border:1px solid rgba(255,255,255,.08); color:var(--text); padding:18px 40px; border-radius:12px; font-weight:700; letter-spacing:.3px;font-size: 24px; }
+    .btn.primary{ background:linear-gradient(180deg,  #a1a1a1, #5d5d5d); border-color:rgba(255,255,255,.08) }
+    .btn.secondary{ background:linear-gradient(180deg,#1a2533,#152031); border-color:rgba(24,41,61,.08) }
     .btn.danger{ background:linear-gradient(180deg,#3a1d22,#2a1619); border-color:rgba(255,107,107,.4) }
 
     .pill{ padding:6px 10px; border:1px solid rgba(255,255,255,.08); border-radius:999px; background:#0a121a; color:#cfe5ff }
     .hint{font-size:13px; color:#cfe5ff; opacity:.8}
 
-    .stage{ min-height:calc(100vh - 120px); height:calc(100svh - 120px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding: calc(env(safe-area-inset-top,0px) + 34px) 16px 20px; text-align:center; }
+    .stage{ min-height:calc(100vh - 220px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding: calc(env(safe-area-inset-top,0px) + 34px) 16px 20px; text-align:center;margin-top:400px; }
 
-    .teams{ display:grid; gap:12px; width:100% }
+    .teams{ display:grid; gap:12px; width:100%; }
     .team{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; background:linear-gradient(180deg,#0e1a26,#0c1621); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:16px }
-    .players{ display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:nowrap; white-space:nowrap; overflow-x:auto }
+    .players{ display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:nowrap; white-space:nowrap; overflow-x:auto }
 
     /* 強化名字、弱化 VS */
-    .badge{ padding:12px 18px; border-radius:999px; background:linear-gradient(180deg,#21334a,#1c2a3f); border:1px solid rgba(255,255,255,.10); font-weight:900; font-size:clamp(22px,5vw,40px); color:#e9f3ff; letter-spacing:.4px }
+    .badge{ padding:10px 48px; border-radius:999px; background:linear-gradient(180deg,#21334a,#1c2a3f); border:1px solid rgba(255,255,255,.10); font-weight:900; font-size:36px; color:#e9f3ff }
     /* 名字色階變體（左右隊） */
     .side{ padding:10px; border-radius:14px; background:transparent; border:none; box-shadow:none; }
     .side-left .badge{
@@ -61,19 +61,19 @@
     .progress{ width:100%; height:8px; border-radius:999px; background:#0a1219; overflow:hidden; border:1px solid rgba(255,255,255,.06) }
     .progress>div{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .25s ease }
 
-    .scoreboard{ display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:center; width:100%; margin-top:10px; padding:16px; border:1px solid rgba(255,255,255,.06); border-radius:16px; background:linear-gradient(180deg,#121a26,#0e1621) }
+    .scoreboard{ display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center; width:100%; margin-top:40px;margin-bottom: 40px; padding:40px; border:1px solid rgba(255,255,255,.06); border-radius:16px; background:linear-gradient(180deg,#121a26,#0e1621);  }
     .score{ display:flex; flex-direction:column; align-items:center; gap:10px }
     /* 縮小比分，以凸顯組合 */
-    .score .value{ font-size: clamp(56px,10.5vw,96px); font-weight:900; padding:10px 18px; border-radius:20px; border:1px solid rgba(255,255,255,.10); background:#0b121b; min-width:110px }
+    .score .value{ font-size: 120px; font-weight:900; padding:32px 60px; border-radius:18px; border:1px solid rgba(255,255,255,.10); background:#0b121b; min-width:88px }
 
     .score-left,.score-right{ background:transparent; border:none; padding:0 }
     .score-left .value{ background:rgba(92,200,255,.12); border-color:rgba(92,200,255,.35) }
     .score-right .value{ background:rgba(138,255,204,.12); border-color:rgba(138,255,204,.35) }
 
-    .counter{font-size:13px; color:#9fb1c1}
-    textarea{ width:100%; min-height:260px; background:#0b121b; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px }
+    .counter{font-size:28px; color:#9fb1c1;margin-top:60px; }
+    textarea{ width:100%; min-height:260px; background:#0b121b; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px;font-size: 28px; }
     .chips{ display:flex; flex-wrap:wrap; gap:8px }
-    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#0f1722 }
+    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:#0f1722;font-size: 18px; }
     .chip input{ accent-color:#70d1ff }
 
     @media (max-width: 768px) {
@@ -81,7 +81,6 @@
     }
   .card.right{ width:70%; justify-self:center; margin-left:auto; margin-right:auto; }
     @media (max-width:768px){ .card.right{ width:94%; } }
-  .stage .counter:last-child{ margin-top:auto; padding-top:6px }
   </style>
 </head>
 <body>
@@ -122,7 +121,6 @@
             <button class="btn" id="prevBtn">← 上一場（P）</button>
             <button class="btn primary" id="nextBtn">下一場（N） →</button>
           </div>
-          <div class="counter">快捷鍵：N 下一場、P 上一場、R 重置場次、[ / ] 左/右 +1、{ / } 左/右 -1。</div>
         </div>
       </div>
     </section>
