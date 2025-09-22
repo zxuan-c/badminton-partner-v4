@@ -158,9 +158,7 @@
       DEFAULT_PLAYERS.forEach(p=>{
         const el=document.createElement('label');
         el.className='chip';
-        el.innerHTML = `
-          <input type="checkbox" data-name="${p}" checked> ${p}
-        `;
+        el.innerHTML = `\n          <input type="checkbox" data-name="${p}" checked> ${p}\n        `;
         rosterEl.appendChild(el);
       });
     }
@@ -208,17 +206,13 @@
     function normalizeVs(s){
       s=s.replace(/[\u3000]/g,' '); // 先保留：若輸入含反斜線序列
       s=s.replace(/[\n\r]/g,' ');
-      // 正規式版本（真正空白與關鍵字）
       s=s.replace(/[\u3000]/g,' ');
       s=s.replace(/\s+/g,' ').trim();
       s=s.replace(/\s*(?:vs\.?|VS\.?|Vs\.?|v\.|V\.|對|對上|對戰|vs：|vs:)\s*/g,' vs ');
-      // 轉為真正的正規式處理
-      s=s.replace(/[\u3000]/g,' '); // 再次清理
-      // 重新以真正的 regex（非字串）處理
+      s=s.replace(/[\u3000]/g,' ');
       s = s.replace(/[\u3000]/g, ' ');
       return s;
     }
-    // 使用真正的 regex（上方留兼容，但此後採用正確版本）
     function normalizeVs2(s){
       s=s.replace(/[\u3000]/g,' ');
       s=s.replace(/\s+/g,' ').trim();
@@ -288,7 +282,7 @@
 
     function setProgress(ratio){
       const bar = document.getElementById('bar');
-      if(!bar){ // create once if missing
+      if(!bar){
         const pr = document.createElement('div'); pr.className='progress';
         const inner = document.createElement('div'); inner.id='bar'; pr.appendChild(inner);
         document.querySelector('.stage').appendChild(pr);
@@ -320,13 +314,13 @@
 
     // ---------- Generator（等量出賽 + 防重複） ----------
     function C(n,k){ if(k<0||k>n) return 0; if(k===0||k===n) return 1; let r=1; for(let i=1;i<=k;i++){ r = r*(n-(k-i))/i; } return Math.round(r); }
-    function chooseM(N){ if(N===8) return 20; if(N===7) return 21; if(N===6) return 18; if(N===5) return 20; if(N===4) return 12; return 0; }
+    function chooseM(N){ if(N===8) return 20; if(N===7) return 21; if(N===6) return 18; if(N===5) return 15; if(N===4) return 12; return 0; }
     function minFeasibleTmax(N){ const M=chooseM(N); if(!M) return 0; if(N===7&&M===21) return 2; const avg=(2*M)/C(N,2); return Math.ceil(avg); }
     function pairsOfFour([a,b,c,d]){ return [[[a,b],[c,d]], [[a,c],[b,d]], [[a,d],[b,c]]]; }
     function pairId(p){ return p.slice().sort().join('&'); }
     function matchKey(m){ const t1=pairId(m[0]); const t2=pairId(m[1]); return [t1,t2].sort().join(' vs '); }
 
-    // === N=8: enumerate 210 unique matches and find a perfectly balanced set (唯一+均衡+連續≤2) ===
+    // === N=8: 列舉 210 種唯一完整對戰，回溯找 20 場唯一 + 每人 10 場 + 連續 ≤ 2 + 相鄰四人組不可相同 ===
     function allUniqueMatchesN8(att){
       const players=att.slice();
       const combs=[];
@@ -345,6 +339,8 @@
       const all=allUniqueMatchesN8(att);
       const idxOf = new Map(att.map((n,i)=>[n,i]));
       const matchPlayersIdx = all.map(m => [...m[0],...m[1]].map(n => idxOf.get(n)));
+      // 預先計算四人組 ID，避免相鄰兩場使用相同四人組
+      const fourIds = matchPlayersIdx.map(arr => arr.slice().sort((a,b)=>a-b).join('-'));
       // adjacency: 每位球員的候選比賽索引列表
       const adj = Array.from({length:8}, ()=>[]);
       for(let mi=0; mi<matchPlayersIdx.length; mi++){
@@ -395,6 +391,8 @@
         const cand=[];
         for(const mi of adj[pivot]){
           if(used[mi]) continue;
+          // 相鄰四人組不可相同
+          if(picked.length){ const prevMi = picked[picked.length-1]; if(fourIds[mi]===fourIds[prevMi]) continue; }
           const players = matchPlayersIdx[mi];
           let ok=true; for(const pi of players){ if(counts[pi]>=target){ ok=false; break; } }
           if(!ok) continue;
@@ -438,59 +436,83 @@
       const ok = dfs(0);
       if(!ok) throw new Error('N=8 未找到均衡且唯一的 20 場（理論上應可解）。');
       const result = picked.map(mi => all[mi]);
-      // 不再洗牌：保留 DFS 次序，以維持「連續 ≤ 2」約束
+      // 不再洗牌：保留 DFS 次序，以維持所有約束
       return result;
     }
 
-    // 🆕 N=5 專用：20 場、每對目標 4 次、避免相鄰重複完整對戰，全局不重複
+    // === N=5：列舉全 15 場唯一對戰，回溯排列使連續出場 ≤ 4（每人自然 12 場） ===
     function generateScheduleN5(att){
-      const N=5, M=20, targetPlays=16, tmax=4;
+      const N=5, M=15;
       const players=att.slice();
-      const pairList=[]; for(let i=0;i<N;i++) for(let j=i+1;j<N;j++) pairList.push([players[i],players[j]]);
-      const need=Object.fromEntries(pairList.map(p=>[pairId(p), tmax])); // 每對 4 次
-      const plays=Object.fromEntries(players.map(n=>[n,0]));
-      const global=new Set();
-      const sched=[];
 
-      function feasiblePair(p){ const id=pairId(p); return need[id]>0; }
-      function pickPair(){
-        const cands=pairList.filter(feasiblePair);
-        cands.sort((x,y)=>{ const nx=need[pairId(x)], ny=need[pairId(y)]; if(nx!==ny) return ny-nx; const sx=plays[x[0]]+plays[x[1]], sy=plays[y[0]]+plays[y[1]]; if(sx!==sy) return sx - sy; return Math.random()<0.5?-1:1; });
-        return cands;
-      }
-
-      let attempts=0;
-      while(attempts<1500){
-        attempts++;
-        for(const k in need) need[k]=tmax; players.forEach(p=>plays[p]=0);
-        sched.length=0; global.clear();
-
-        for(let r=0;r<M;r++){
-          const listA=pickPair(); let placed=false;
-          for(const A of listA){
-            const listB=pickPair().filter(B=>!B.includes(A[0]) && !B.includes(A[1]));
-            for(const B of listB){
-              const match=[[A[0],A[1]],[B[0],B[1]]];
-              const key=matchKey(match);
-              if(global.has(key)) continue;
-              if(sched.length){ const prev=matchKey(sched[sched.length-1]); if(prev===key) continue; }
-              const idA=pairId(A), idB=pairId(B);
-              if(need[idA]<=0 || need[idB]<=0) continue;
-              const newPlays=[...A,...B].map(p=>plays[p]+1);
-              if(newPlays.some(v=>v>targetPlays)) continue;
-              sched.push(match);
-              global.add(key); need[idA]--; need[idB]--;
-              plays[A[0]]++; plays[A[1]]++; plays[B[0]]++; plays[B[1]]++;
-              placed=true; break;
-            }
-            if(placed) break;
-          }
-          if(!placed){ break; }
+      function allUniqueMatchesN5(list){
+        const res=[];
+        for(let rest=0; rest<list.length; rest++){
+          const four=list.filter((_,i)=>i!==rest);
+          const pr=pairsOfFour(four);
+          pr.forEach(m=>res.push(m));
         }
-        const done = sched.length===M && players.every(p=>plays[p]===targetPlays) && Object.values(need).every(v=>v===0);
-        if(done) return sched;
+        return res; // 15 場
       }
-      return null;
+
+      const all=allUniqueMatchesN5(players);
+      const idxOf = new Map(players.map((n,i)=>[n,i]));
+      const matchPlayersIdx = all.map(m => [...m[0],...m[1]].map(n => idxOf.get(n)));
+
+      const used = new Array(all.length).fill(false);
+      const streak = new Array(N).fill(0);
+      const order = [];
+
+      function wouldExceed(mi){
+        const inMatch = new Array(N).fill(false);
+        for(const pi of matchPlayersIdx[mi]) inMatch[pi]=true;
+        for(let i=0;i<N;i++){
+          const ns = inMatch[i] ? streak[i]+1 : 0;
+          if(ns>4) return true;
+        }
+        return false;
+      }
+
+      function choosePivot(){
+        let best=0;
+        for(let i=1;i<N;i++) if(streak[i]>streak[best]) best=i;
+        return best;
+      }
+
+      function dfs(depth){
+        if(depth===M) return true;
+        const pivot = choosePivot();
+        const cand=[];
+        for(let mi=0; mi<all.length; mi++) if(!used[mi] && !wouldExceed(mi)) cand.push(mi);
+        const includesPivot = (mi)=> matchPlayersIdx[mi].includes(pivot);
+        const score = (mi)=>{
+          let s=0; const inMatch = new Array(N).fill(false);
+          for(const pi of matchPlayersIdx[mi]) inMatch[pi]=true;
+          for(let i=0;i<N;i++){
+            if(!inMatch[i]) s += (streak[i]>=3? 5 : 2);
+            else s -= (streak[i]>=3? 3 : 0);
+          }
+          if(!includesPivot(mi)) s += 8;
+          return s;
+        };
+        cand.sort((a,b)=> score(b)-score(a));
+
+        for(const mi of cand){
+          used[mi]=true;
+          const prev=streak.slice();
+          for(let i=0;i<N;i++) streak[i] = matchPlayersIdx[mi].includes(i) ? streak[i]+1 : 0;
+          order.push(mi);
+          if(dfs(depth+1)) return true;
+          order.pop();
+          for(let i=0;i<N;i++) streak[i]=prev[i];
+          used[mi]=false;
+        }
+        return false;
+      }
+
+      const ok = dfs(0);
+      if(!ok) return null;
+      return order.map(mi=>all[mi]);
     }
 
     function generateSchedule(att, opts, timeBudgetMs){
@@ -570,7 +592,6 @@
 
       let base = { K: 2, noDoubleRest: true, noPartnerRepeat3: true, noExactAdjacent: true, globalUnique: (N>=6), tmax: minFeasibleTmax(N) };
       if(N===8){
-        // 反覆嘗試直到找到「20 場唯一 + 每人 10 場 + 連續 ≤ 2」
         let result=null; let tries=0;
         while(!result){
           tries++;
@@ -591,7 +612,7 @@
         if(result){
           inputArea.value = result.map(m=>`${m[0][0]} + ${m[0][1]} vs ${m[1][0]} + ${m[1][1]}`).join('\n');
           parse(); idx=0; scores={}; render(); save();
-          status('完成：N=5，M=20（每人 16 場、每對 4 次）');
+          status('完成：N=5，M=15（連續出場 ≤ 4）');
           return;
         }
         status('N=5：仍未找到可行解，請稍後重試或更換人員。');
@@ -671,18 +692,40 @@
           if(roster8.some(n=>streakTest[n]>2)) { okStreak=false; break; }
         }
         console.assert(okStreak, 'N=8 連續出場次數應 ≤ 2');
+        // 相鄰四人組不可相同
+        let okAdj=true;
+        for(let i=1;i<sample.length;i++){
+          const a=[...sample[i-1][0],...sample[i-1][1]].sort().join('|');
+          const b=[...sample[i][0],...sample[i][1]].sort().join('|');
+          if(a===b){ okAdj=false; break; }
+        }
+        console.assert(okAdj, 'N=8 相鄰場次不可使用相同四人組合');
 
-        // N=5 專用產生器 smoke test（可能需要多跑幾次才有解）
+        // N=5 產生器測試（15 場 + 每人 12 場 + 連續 ≤ 4）
         const roster5 = ['P1','P2','P3','P4','P5'];
         const gs5 = generateScheduleN5(roster5);
-        console.assert(gs5 && gs5.length===20, 'N=5 產生器應回傳 20 場');
+        console.assert(gs5 && gs5.length===15, 'N=5 產生器應回傳 15 場');
+        const cnt5=Object.fromEntries(roster5.map(n=>[n,0]));
+        const idx5=new Map(roster5.map((n,i)=>[n,i]));
+        const streak5=new Array(roster5.length).fill(0);
+        let okCnt5=true, okStreak5=true;
+        for(const m of gs5){
+          const players=[...m[0],...m[1]];
+          roster5.forEach(n=>{ const i=idx5.get(n); if(players.includes(n)){ cnt5[n]++; streak5[i]++; if(streak5[i]>4) okStreak5=false; } else { streak5[i]=0; } });
+        }
+        if(!roster5.every(n=>cnt5[n]===12)) okCnt5=false;
+        console.assert(okCnt5, 'N=5 每人出場應為 12');
+        console.assert(okStreak5, 'N=5 連續出場應 ≤ 4');
+        // N=5 唯一性：15 場都不同（完整對戰類型不重複）
+        const uniq5 = new Set(gs5.map(m=>matchKey(m))).size===15;
+        console.assert(uniq5, 'N=5 應該是 15 種唯一完整對戰');
 
         // 組合切分函式
         const pf = pairsOfFour(['a','b','c','d']);
         console.assert(pf.length===3, 'pairsOfFour 應回傳 3 種配對');
 
         // chooseM / minFeasibleTmax
-        console.assert(chooseM(8)===20 && chooseM(7)===21 && chooseM(6)===18 && chooseM(5)===20 && chooseM(4)===12, 'chooseM 值錯誤');
+        console.assert(chooseM(8)===20 && chooseM(7)===21 && chooseM(6)===18 && chooseM(5)===15 && chooseM(4)===12, 'chooseM 值錯誤');
         console.assert(minFeasibleTmax(8)===2, 'N=8 tmax 應為 2');
 
         console.log('%cDevTests passed','color:#8affcc');
